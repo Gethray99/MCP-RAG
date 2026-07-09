@@ -1,0 +1,15 @@
+[project]
+name = "simple-rag"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "chromadb>=1.5.9",
+    "fastmcp>=3.4.2",
+    "llama-cloud>=0.1.46",
+    "llama-cloud-services>=0.6.94",
+    "llama-index>=0.14.22",
+    "llama-parse>=0.6.94",
+    "python-dotenv>=1.2.2",
+]
