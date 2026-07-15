@@ -132,6 +132,6 @@ def clear_cache():
     if redis_client:
         try:
             redis_client.flushdb()
-            print("🗑️  Redis cache cleared.")
+            print("Redis cache cleared.")
         except Exception as e:
             print(f"Redis flush error: {e}")
