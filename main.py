@@ -4,6 +4,7 @@ import chromadb
 from llama_cloud_services import LlamaParse
 from llama_index.core import SimpleDirectoryReader
 from dotenv import load_dotenv
+from redis_cache import get_cached_results,set_cached_results,clear_cache
 
 load_dotenv()
 
@@ -45,6 +46,7 @@ def ingest_data():
       metadatas=[doc.metadata],
       ids=[doc.doc_id]
     )
+  clear_cache()
 
   final_count = new_collection.count()
   return f"Final count: {final_count}"
@@ -53,9 +55,13 @@ def ingest_data():
 @mcp.tool(timeout=600)
 def query_data(query:str , n_result:int):
    """
-   Query the vector database for documents for documents similar to the query.
+   Query the vector database for documents similar to the query.
    """
-
+   cached_data = get_cached_results(query, n_result)
+   if cached_data:
+     return cached_data
+   
+   print(f"CACHE MISS: Querying ChromaDB for '{query}' ......")
 
    client , collection = init_chroma()
 
@@ -63,13 +69,14 @@ def query_data(query:str , n_result:int):
 
    results = collection.query(
       query_texts=[query],
-      n_results= 2,
+      n_results= n_result,
       include=["documents", "metadatas", "distances"]
    )
 
    if results == None or len(results) == 0:
       return "No results found"
-
+   
+   set_cached_results(query,n_result,results)
    return results
 
 
@@ -85,4 +92,4 @@ def get_db_status():
 
 if __name__ == "__main__":
   init_chroma()
-  mcp.run("streamable-http")
+  mcp.run("stdio")
