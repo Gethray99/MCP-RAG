@@ -1,10 +1,21 @@
-import os 
+import os
+import logging
+import sys 
 from fastmcp import FastMCP
 import chromadb
 from llama_cloud_services import LlamaParse
 from llama_index.core import SimpleDirectoryReader
 from dotenv import load_dotenv
 from redis_cache import get_cached_results,set_cached_results,clear_cache
+
+logging.basicConfig(
+  level=logging.INFO,
+  format="%(message)s",
+  stream=sys.stderr
+)
+
+logger = logging.getLogger(__name__)
+
 
 load_dotenv()
 
@@ -14,6 +25,7 @@ DATA_DIR = "./data"
 LLAMA_API = os.getenv("LLAMA_CLOUD_API_KEY", "")
 
 mcp = FastMCP("RAG Server")
+
 
 def init_chroma():
   client = chromadb.PersistentClient(path=PERSISTENT_CLIENT)
@@ -61,7 +73,7 @@ def query_data(query:str , n_result:int):
    if cached_data:
      return cached_data
    
-   print(f"CACHE MISS: Querying ChromaDB for '{query}' ......")
+   logger.info(f"CACHE MISS: Querying ChromaDB for '{query}' ......")
 
    client , collection = init_chroma()
 

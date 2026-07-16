@@ -7,6 +7,10 @@ from redis.commands.search.query import Query
 from redis.commands.search.index_definition import IndexDefinition, IndexType
 from sentence_transformers import SentenceTransformer
 from dotenv import load_dotenv
+import logging
+import sys
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -18,10 +22,10 @@ INDEX_NAME = "rag_cache_idx"
 
 # Semantic Threshold: Lower distance = more similar. 
 # 0.15 means the query must be roughly 85%+ mathematically similar to trigger a cache hit.
-SIMILARITY_THRESHOLD = 0.15 
+SIMILARITY_THRESHOLD = 0.30
 
 # Load a fast, lightweight local embedding model to vectorize the queries
-print("⏳ Loading embedding model...")
+logger.info("Loading embedding model...")
 embedder = SentenceTransformer('all-MiniLM-L6-v2')
 VECTOR_DIMENSION = 384 # MiniLM creates vectors with 384 dimensions
 
@@ -34,7 +38,7 @@ def init_redis():
         # Check if the vector index already exists
         try:
             r.ft(INDEX_NAME).info()
-            print("✅ Redis Semantic Cache connected (Index exists).")
+            logger.info("Redis Semantic Cache connected (Index exists).")
         except redis.exceptions.ResponseError:
             # Create the vector index schema
             schema = (
@@ -50,11 +54,11 @@ def init_redis():
             )
             definition = IndexDefinition(prefix=["rag_cache:"], index_type=IndexType.HASH)
             r.ft(INDEX_NAME).create_index(fields=schema, definition=definition)
-            print("✅ Redis Semantic Cache connected (New Index created).")
+            logger.info("Redis Semantic Cache connected (New Index created).")
             
         return r
     except redis.ConnectionError:
-        print("⚠️ Warning: Could not connect to Redis. Caching is disabled.")
+        logger.info("Warning: Could not connect to Redis. Caching is disabled.")
         return None
 
 # Global Redis Client
@@ -91,13 +95,13 @@ def get_cached_results(query: str, n_result: int):
             
             # If the mathematical distance is below our threshold, it's a hit!
             if distance_score < SIMILARITY_THRESHOLD:
-                print(f"⚡ SEMANTIC CACHE HIT: '{query}' matched past query '{closest_match.original_query}' (Distance: {distance_score:.4f})")
+                logger.info(f"SEMANTIC CACHE HIT: '{query}' matched past query '{closest_match.original_query}' (Distance: {distance_score:.4f})")
                 return json.loads(closest_match.cached_result)
             else:
-                print(f"🐌 CACHE MISS: Closest match was '{closest_match.original_query}' but distance was too high ({distance_score:.4f})")
+                logger.info(f"CACHE MISS: Closest match was '{closest_match.original_query}' but distance was too high ({distance_score:.4f})")
                 
     except Exception as e:
-        print(f"Redis search error: {e}")
+        logger.info(f"Redis search error: {e}")
         
     return None
 
@@ -125,13 +129,13 @@ def set_cached_results(query: str, n_result: int, results: dict):
         redis_client.expire(cache_key, CACHE_TTL)
         
     except Exception as e:
-        print(f"Redis write error: {e}")
+        logger.info(f"Redis write error: {e}")
 
 def clear_cache():
     """Flushes the database."""
     if redis_client:
         try:
             redis_client.flushdb()
-            print("Redis cache cleared.")
+            logger.info("Redis cache cleared.")
         except Exception as e:
-            print(f"Redis flush error: {e}")
+            logger.info(f"Redis flush error: {e}")
