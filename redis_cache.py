@@ -22,7 +22,7 @@ INDEX_NAME = "rag_cache_idx"
 
 # Semantic Threshold: Lower distance = more similar. 
 # 0.15 means the query must be roughly 85%+ mathematically similar to trigger a cache hit.
-SIMILARITY_THRESHOLD = 0.30
+SIMILARITY_THRESHOLD = 0.35
 
 # Load a fast, lightweight local embedding model to vectorize the queries
 logger.info("Loading embedding model...")
